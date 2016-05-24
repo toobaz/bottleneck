@@ -1,7 +1,7 @@
 import warnings
 import numpy as np
 
-__all__ = ['median', 'nanmedian', 'nansum', 'nanmean', 'nanvar', 'nanstd',
+__all__ = ['median', 'nanmedian', 'nansum', 'nansum2', 'nanmean', 'nanvar', 'nanstd',
            'nanmin', 'nanmax', 'nanargmin', 'nanargmax', 'ss', 'anynan',
            'allnan']
 
@@ -9,6 +9,15 @@ from numpy import nanmean, nanmedian
 
 
 def nansum(arr, axis=None):
+    "Slow nansum function used for unaccelerated dtype."
+    arr = np.asarray(arr)
+    y = np.nansum(arr, axis=axis)
+    if y.dtype != arr.dtype:
+        y = y.astype(arr.dtype)
+    return y
+
+
+def nansum2(arr, axis=None):
     "Slow nansum function used for unaccelerated dtype."
     arr = np.asarray(arr)
     y = np.nansum(arr, axis=axis)

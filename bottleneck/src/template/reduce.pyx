@@ -68,6 +68,261 @@ cdef np.float64_t MINfloat64 = -np.inf
 
 # nansum --------------------------------------------------------------------
 
+def nansum2(arr, axis=None):
+    """
+    Sum of array elements along given axis treating NaNs as zero.
+
+    The data type (dtype) of the output is the same as the input. On 64-bit
+    operating systems, 32-bit input is NOT upcast to 64-bit accumulator and
+    return values.
+
+    Parameters
+    ----------
+    arr : array_like
+        Array containing numbers whose sum is desired. If `arr` is not an
+        array, a conversion is attempted.
+    axis : {int, None}, optional
+        Axis along which the sum is computed. The default (axis=None) is to
+        compute the sum of the flattened array.
+
+    Returns
+    -------
+    y : ndarray
+        An array with the same shape as `arr`, with the specified axis removed.
+        If `arr` is a 0-d array, or if axis is None, a scalar is returned.
+
+    Notes
+    -----
+    No error is raised on overflow.
+
+    If positive or negative infinity are present the result is positive or
+    negative infinity. But if both positive and negative infinity are present,
+    the result is Not A Number (NaN).
+
+    Examples
+    --------
+    >>> bn.nansum(1)
+    1
+    >>> bn.nansum([1])
+    1
+    >>> bn.nansum([1, np.nan])
+    1.0
+    >>> a = np.array([[1, 1], [1, np.nan]])
+    >>> bn.nansum(a)
+    3.0
+    >>> bn.nansum(a, axis=0)
+    array([ 2.,  1.])
+
+    When positive infinity and negative infinity are present:
+
+    >>> bn.nansum([1, np.nan, np.inf])
+    inf
+    >>> bn.nansum([1, np.nan, np.NINF])
+    -inf
+    >>> bn.nansum([1, np.nan, np.inf, np.NINF])
+    nan
+
+    """
+    try:
+        return reducer(arr, axis,
+                       nansum2_all_float64,
+                       nansum2_all_float32,
+                       nansum2_all_int64,
+                       nansum2_all_int32,
+                       nansum2_one_float64,
+                       nansum2_one_float32,
+                       nansum2_one_int64,
+                       nansum2_one_int32,
+                       nansum2_0d)
+    except TypeError:
+        return slow.nansum(arr, axis)
+
+
+cdef object nansum2_all_DTYPE0(np.flatiter ita, Py_ssize_t stride,
+                              Py_ssize_t length, int int_input):
+    # bn.dtypes = [['float64'], ['float32']]
+    cdef Py_ssize_t i, j
+    cdef DTYPE0_t asum = 0, ai,
+    cdef DTYPE0_t x[8]
+    x[0] = 0
+    x[1] = 0
+    x[2] = 0
+    x[3] = 0
+    x[4] = 0
+    x[5] = 0
+    x[6] = 0
+    x[7] = 0
+    with nogil:
+        if length >= 16:
+            while PyArray_ITER_NOTDONE(ita):
+                ai = (<DTYPE0_t*>(<char*>pid(ita) + 0 * stride))[0]
+                if ai == ai: x[0] += ai
+                ai = (<DTYPE0_t*>(<char*>pid(ita) + 1 * stride))[0]
+                if ai == ai: x[1] += ai
+                ai = (<DTYPE0_t*>(<char*>pid(ita) + 2 * stride))[0]
+                if ai == ai: x[2] += ai
+                ai = (<DTYPE0_t*>(<char*>pid(ita) + 3 * stride))[0]
+                if ai == ai: x[3] += ai
+                ai = (<DTYPE0_t*>(<char*>pid(ita) + 4 * stride))[0]
+                if ai == ai: x[4] += ai
+                ai = (<DTYPE0_t*>(<char*>pid(ita) + 5 * stride))[0]
+                if ai == ai: x[5] += ai
+                ai = (<DTYPE0_t*>(<char*>pid(ita) + 6 * stride))[0]
+                if ai == ai: x[6] += ai
+                ai = (<DTYPE0_t*>(<char*>pid(ita) + 7 * stride))[0]
+                if ai == ai: x[7] += ai
+                for i in range(8, length - (length % 8), 8):
+                    ai = (<DTYPE0_t*>(<char*>pid(ita) + i * stride))[0]
+                    if ai == ai: x[0] += ai
+                    ai = (<DTYPE0_t*>(<char*>pid(ita) + (i+1) * stride))[0]
+                    if ai == ai: x[1] += ai
+                    ai = (<DTYPE0_t*>(<char*>pid(ita) + (i+2) * stride))[0]
+                    if ai == ai: x[2] += ai
+                    ai = (<DTYPE0_t*>(<char*>pid(ita) + (i+3) * stride))[0]
+                    if ai == ai: x[3] += ai
+                    ai = (<DTYPE0_t*>(<char*>pid(ita) + (i+4) * stride))[0]
+                    if ai == ai: x[4] += ai
+                    ai = (<DTYPE0_t*>(<char*>pid(ita) + (i+5) * stride))[0]
+                    if ai == ai: x[5] += ai
+                    ai = (<DTYPE0_t*>(<char*>pid(ita) + (i+6) * stride))[0]
+                    if ai == ai: x[6] += ai
+                    ai = (<DTYPE0_t*>(<char*>pid(ita) + (i+7) * stride))[0]
+                    if ai == ai: x[7] += ai
+                asum += x[0] + x[1] + x[2] + x[3] + x[4] + x[5] + x[6] + x[7]
+                for j in range(i + 8, length):
+                    ai = (<DTYPE0_t*>((<char*>pid(ita)) + j * stride))[0]
+                    if ai == ai: asum += ai
+                PyArray_ITER_NEXT(ita)
+        else:
+            while PyArray_ITER_NOTDONE(ita):
+                for i in range(length):
+                    ai = (<DTYPE0_t*>((<char*>pid(ita)) + i * stride))[0]
+                    if ai == ai: asum += ai
+                PyArray_ITER_NEXT(ita)
+    return asum
+
+
+cdef object nansum2_all_DTYPE0(np.flatiter ita, Py_ssize_t stride,
+                              Py_ssize_t length, int int_input):
+    # bn.dtypes = [['int64'], ['int32']]
+    cdef Py_ssize_t i
+    cdef DTYPE0_t asum = 0, ai
+    with nogil:
+        while PyArray_ITER_NOTDONE(ita):
+            for i in range(length):
+                ai = (<DTYPE0_t*>((<char*>pid(ita)) + i * stride))[0]
+                if DTYPE0 == 'float64':
+                    asum += ai
+                if DTYPE0 == 'float32':
+                    if ai == ai:
+                        asum += ai
+                if DTYPE0 == 'int64':
+                    asum += ai
+                if DTYPE0 == 'int32':
+                    asum += ai
+            PyArray_ITER_NEXT(ita)
+    return asum
+
+
+cdef ndarray nansum2_one_DTYPE0(np.flatiter ita,
+                               Py_ssize_t stride, Py_ssize_t length,
+                               int a_ndim, np.npy_intp* y_dims, int int_input):
+    # bn.dtypes = [['float64'], ['float32']]
+    cdef Py_ssize_t i, j
+    cdef DTYPE0_t ai, asum=0, x[4]
+    cdef ndarray y = PyArray_EMPTY(a_ndim - 1, y_dims, NPY_DTYPE0, 0)
+    cdef np.flatiter ity = PyArray_IterNew(y)
+    with nogil:
+        if length == 0:
+            while PyArray_ITER_NOTDONE(ity):
+                (<DTYPE0_t*>((<char*>pid(ity))))[0] = asum
+                PyArray_ITER_NEXT(ity)
+        elif length >= 8:
+            while PyArray_ITER_NOTDONE(ita):
+                x[0] = 0
+                x[1] = 0
+                x[2] = 0
+                x[3] = 0
+                ai = (<DTYPE0_t*>(<char*>pid(ita)))[0]
+                if ai == ai: x[0] += ai
+                ai = (<DTYPE0_t*>(<char*>pid(ita) + 1 * stride))[0]
+                if ai == ai: x[1] += ai
+                ai = (<DTYPE0_t*>(<char*>pid(ita) + 2 * stride))[0]
+                if ai == ai: x[2] += ai
+                ai = (<DTYPE0_t*>(<char*>pid(ita) + 3 * stride))[0]
+                if ai == ai: x[3] += ai
+                for i in range(4, length, 4):
+                    ai = (<DTYPE0_t*>(<char*>pid(ita) + i * stride))[0]
+                    if ai == ai: x[0] += ai
+                    ai = (<DTYPE0_t*>(<char*>pid(ita) + (i+1) * stride))[0]
+                    if ai == ai: x[1] += ai
+                    ai = (<DTYPE0_t*>(<char*>pid(ita) + (i+2) * stride))[0]
+                    if ai == ai: x[2] += ai
+                    ai = (<DTYPE0_t*>(<char*>pid(ita) + (i+3) * stride))[0]
+                    if ai == ai: x[3] += ai
+                asum = (x[0] + x[1]) + (x[2] + x[3])
+                for j in range(i + 4, length):
+                    ai = (<DTYPE0_t*>(<char*>pid(ita) + j * stride))[0]
+                    if ai == ai: asum += ai
+                (<DTYPE0_t*>((<char*>pid(ity))))[0] = asum
+                PyArray_ITER_NEXT(ita)
+                PyArray_ITER_NEXT(ity)
+        else:
+            while PyArray_ITER_NOTDONE(ita):
+                asum = 0
+                for j in range(length):
+                    ai = (<DTYPE0_t*>(<char*>pid(ita) + j * stride))[0]
+                    if ai == ai: asum += ai
+                (<DTYPE0_t*>((<char*>pid(ity))))[0] = asum
+                PyArray_ITER_NEXT(ita)
+                PyArray_ITER_NEXT(ity)
+    return y
+
+
+cdef ndarray nansum2_one_DTYPE0(np.flatiter ita,
+                               Py_ssize_t stride, Py_ssize_t length,
+                               int a_ndim, np.npy_intp* y_dims, int int_input):
+    # bn.dtypes = [['int64'], ['int32']]
+    cdef Py_ssize_t i
+    cdef DTYPE0_t asum = 0, ai
+    cdef ndarray y = PyArray_EMPTY(a_ndim - 1, y_dims, NPY_DTYPE0, 0)
+    cdef np.flatiter ity = PyArray_IterNew(y)
+    with nogil:
+        if length == 0:
+            while PyArray_ITER_NOTDONE(ity):
+                (<DTYPE0_t*>((<char*>pid(ity))))[0] = asum
+                PyArray_ITER_NEXT(ity)
+        else:
+            while PyArray_ITER_NOTDONE(ita):
+                asum = 0
+                for i in range(length):
+                    ai = (<DTYPE0_t*>((<char*>pid(ita)) + i*stride))[0]
+                    if DTYPE0 == 'float64':
+                        if ai == ai:
+                            asum += ai
+                    if DTYPE0 == 'float32':
+                        if ai == ai:
+                            asum += ai
+                    if DTYPE0 == 'int64':
+                        asum += ai
+                    if DTYPE0 == 'int32':
+                        asum += ai
+                (<DTYPE0_t*>((<char*>pid(ity))))[0] = asum
+                PyArray_ITER_NEXT(ita)
+                PyArray_ITER_NEXT(ity)
+    return y
+
+
+cdef nansum2_0d(ndarray a, int int_input):
+    out = a[()]
+    if out == out:
+        return out
+    else:
+        return 0.0
+
+
+# nansum --------------------------------------------------------------------
+
 def nansum(arr, axis=None):
     """
     Sum of array elements along given axis treating NaNs as zero.
